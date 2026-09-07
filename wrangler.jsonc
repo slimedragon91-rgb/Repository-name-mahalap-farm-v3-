@@ -1,7 +1,14 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
- "name": "repository-name-mahalap-farm-v3",
+  "name": "repository-name-mahalap-farm-v3",
   "main": "src/index.ts",
   "compatibility_date": "2026-09-03",
-  "workers_dev": true
+  "workers_dev": true,
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "mahalap-farm-v3-db",
+      "database_id": "137a9cf5-7cb1-441d-adb5-247707b3439a"
+    }
+  ]
 }
