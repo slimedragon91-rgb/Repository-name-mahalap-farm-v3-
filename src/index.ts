@@ -1,4 +1,4 @@
-export interface Env {
+
   DB?: D1Database;
   FILES?: R2Bucket;
   CACHE?: KVNamespace;
@@ -142,7 +142,7 @@ async function getAuction(
     .first<Record<string, unknown>>();
 }
 
-const homeHtml = `<!doctype html>
+const HOME_PAGE_HTML = `<!doctype html>
 <html lang="th">
 <head>
   <meta charset="utf-8">
@@ -214,7 +214,7 @@ export default {
     }
 
     if (method === "GET" && path === "/") {
-      return new Response(homeHtml, {
+      return new Response(HOME_PAGE_HTML, {
         headers: { "content-type": "text/html; charset=utf-8" },
       });
     }
