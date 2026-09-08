@@ -259,7 +259,7 @@ async function loadAuctions(){
         '<p class="small muted">เริ่ม: '+esc(a.starts_at||"-")+'<br>ปิด: '+esc(a.ends_at||"-")+'</p>'+ 
         (open?'<div class="bidbox"><label for="bid-'+esc(a.id)+'"><strong>จำนวนเงินที่ต้องการเสนอ</strong></label>'+ 
           '<input id="bid-'+esc(a.id)+'" type="number" min="'+next+'" step="'+increment+'" placeholder="อย่างน้อย '+money(next)+' บาท">'+ 
-          '<button id="btn-'+esc(a.id)+'" onclick="submitBid(\''+esc(a.id)+'\')">เสนอราคา</button>'+ 
+          '<button id="btn-'+esc(a.id)+'" data-bid-id="'+esc(a.id)+'">เสนอราคา</button>'+ 
           '<div class="msg" id="msg-'+esc(a.id)+'"></div></div>':'<p class="muted">รายการนี้ยังไม่เปิดให้เสนอราคา</p>')+
         '<div class="history"><strong>ประวัติราคา</strong><div id="history-'+esc(a.id)+'" class="small muted">กำลังโหลด...</div></div>'+ 
         '</div>';
@@ -270,6 +270,14 @@ async function loadAuctions(){
     list.textContent="ไม่สามารถโหลดรายการประมูลได้";
   }
 }
+
+document.addEventListener("click",e=>{
+  const target=e.target;
+  if(target instanceof HTMLElement){
+    const button=target.closest("button[data-bid-id]");
+    if(button)submitBid(button.getAttribute("data-bid-id")||"");
+  }
+});
 
 loadAuctions();
 setInterval(loadAuctions,15000);
