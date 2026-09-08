@@ -149,56 +149,130 @@ const HOME_PAGE_HTML = `<!doctype html>
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>มหาลาภฟาร์ม V3.0</title>
   <style>
-    body{font-family:system-ui,sans-serif;max-width:1000px;margin:auto;padding:24px;background:#f5f7f4;color:#172018}
-    .card{background:#fff;border-radius:18px;padding:20px;margin:14px 0;box-shadow:0 4px 18px #00000012}
-    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px}
-    .tag{display:inline-block;padding:5px 10px;border-radius:999px;background:#e8f5e9}
-    button{border:0;border-radius:10px;padding:9px 14px;cursor:pointer}
-    .price{font-size:1.3rem;font-weight:700}
+    *{box-sizing:border-box}
+    body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;max-width:1100px;margin:auto;padding:18px;background:#f5f7f4;color:#172018}
+    .hero,.section,.auction{background:#fff;border-radius:20px;padding:20px;margin:14px 0;box-shadow:0 4px 18px #00000012}
+    .hero{background:linear-gradient(135deg,#ffffff,#eef8ee)}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:16px}
+    .tag{display:inline-block;padding:5px 10px;border-radius:999px;background:#e8f5e9;font-size:.85rem}
+    .price{font-size:1.6rem;font-weight:800;margin:8px 0}
+    .next{font-weight:700}
     .muted{color:#667}
+    .bidbox{margin-top:16px;padding:14px;border-radius:14px;background:#f7faf7;border:1px solid #e3ebe3}
+    input{width:100%;padding:12px;border:1px solid #ccd7cc;border-radius:10px;font-size:1rem;margin:8px 0}
+    button{width:100%;border:0;border-radius:10px;padding:12px 14px;cursor:pointer;font-weight:700;background:#1f7a3a;color:#fff}
+    button:disabled{opacity:.55;cursor:not-allowed}
+    .msg{margin-top:9px;font-size:.92rem;min-height:20px}
+    .history{margin-top:14px;border-top:1px solid #e5e9e5;padding-top:12px}
+    .bidrow{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px solid #edf0ed}
+    .small{font-size:.86rem}
+    @media(max-width:520px){body{padding:10px}.hero,.section,.auction{padding:15px}.price{font-size:1.35rem}}
   </style>
 </head>
 <body>
-  <div class="card">
+  <div class="hero">
     <span class="tag">Cloudflare Worker</span>
     <h1>มหาลาภฟาร์ม V3.0</h1>
-    <p>ระบบจัดการฟาร์ม สินค้า และประมูลไก่</p>
-    <p>สถานะ: <strong id="status">กำลังตรวจสอบ...</strong></p>
+    <p>ตลาดสินค้าและระบบประมูลไก่สำหรับลูกค้า</p>
+    <p>ผู้ใช้ปัจจุบัน: <strong>ผู้ใช้ทดสอบ</strong></p>
+    <p>สถานะระบบ: <strong id="status">กำลังตรวจสอบ...</strong></p>
   </div>
 
-  <div class="card">
-    <h2>ประมูลไก่</h2>
+  <div class="section">
+    <h2>รายการประมูล</h2>
+    <p class="muted">ลูกค้าสามารถดูราคาและเสนอราคาได้จากหน้านี้</p>
     <div id="list">กำลังโหลด...</div>
   </div>
 
 <script>
+const DEMO_USER_ID="user-demo-001";
+const money=n=>Number(n||0).toLocaleString("th-TH",{maximumFractionDigits:2});
+const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+
+async function getBids(id){
+  const r=await fetch("/api/auctions/"+encodeURIComponent(id)+"/bids");
+  const x=await r.json();
+  if(!x.ok) throw new Error(x.error||"โหลดประวัติไม่สำเร็จ");
+  return x.bids||[];
+}
+
+function renderHistory(id,bids){
+  const el=document.querySelector("#history-"+CSS.escape(id));
+  if(!el)return;
+  if(!bids.length){el.innerHTML='<div class="muted small">ยังไม่มีผู้เสนอราคา</div>';return;}
+  el.innerHTML=bids.slice(0,8).map((b,i)=>
+    '<div class="bidrow small"><span>'+(i===0?'🏆 ':'')+esc(b.display_name||"ผู้ใช้")+'</span><strong>'+money(b.amount)+' บาท</strong></div>'
+  ).join("");
+}
+
+async function showHistory(id){
+  try{renderHistory(id,await getBids(id));}catch(e){
+    const el=document.querySelector("#history-"+CSS.escape(id));
+    if(el)el.innerHTML='<div class="muted small">ไม่สามารถโหลดประวัติการเสนอราคาได้</div>';
+  }
+}
+
+async function submitBid(id){
+  const input=document.querySelector("#bid-"+CSS.escape(id));
+  const button=document.querySelector("#btn-"+CSS.escape(id));
+  const msg=document.querySelector("#msg-"+CSS.escape(id));
+  const amount=Number(input.value);
+  if(!Number.isFinite(amount)||amount<=0){msg.textContent="กรุณาใส่จำนวนเงินที่ถูกต้อง";return;}
+  button.disabled=true;msg.textContent="กำลังส่งราคา...";
+  try{
+    const r=await fetch("/api/auctions/"+encodeURIComponent(id)+"/bids",{
+      method:"POST",
+      headers:{"Content-Type":"application/json","X-User-Id":DEMO_USER_ID},
+      body:JSON.stringify({amount})
+    });
+    const x=await r.json();
+    if(!r.ok||!x.ok){
+      msg.textContent=x.minimum_bid?"เสนอราคาต่ำเกินไป — ขั้นต่ำ "+money(x.minimum_bid)+" บาท":(x.error||"เสนอราคาไม่สำเร็จ");
+      return;
+    }
+    msg.textContent="เสนอราคา "+money(amount)+" บาท สำเร็จแล้ว ✓";
+    input.value="";
+    await loadAuctions();
+  }catch(e){msg.textContent="เกิดข้อผิดพลาดในการเชื่อมต่อ";}
+  finally{button.disabled=false;}
+}
+
 async function loadAuctions(){
   const list=document.querySelector("#list");
   try{
     const r=await fetch("/api/auctions");
     const x=await r.json();
-    if(!x.ok) throw new Error(x.error||"error");
+    if(!x.ok)throw new Error(x.error||"error");
     document.querySelector("#status").textContent="พร้อมใช้งาน";
-    if(!x.auctions.length){
-      list.innerHTML='<p class="muted">ยังไม่มีรายการประมูล</p>';
-      return;
-    }
-    list.innerHTML='<div class="grid">'+x.auctions.map(a =>
-      '<div class="card">'+
-      '<span class="tag">'+String(a.status)+'</span>'+
-      '<h3>'+String(a.title)+'</h3>'+
-      '<p>'+String(a.product_name||"")+'</p>'+
-      '<div class="price">'+Number(a.current_price||0).toLocaleString()+" บาท"+'</div>'+
-      '<p>เริ่ม: '+String(a.starts_at||"-")+'</p>'+
-      '<p>ปิด: '+String(a.ends_at||"-")+'</p>'+
-      '</div>'
-    ).join("")+'</div>';
+    if(!x.auctions.length){list.innerHTML='<p class="muted">ยังไม่มีรายการประมูล</p>';return;}
+    list.innerHTML=x.auctions.map(a=>{
+      const current=Number(a.current_price||0);
+      const increment=Number(a.minimum_increment||0);
+      const next=Math.max(Number(a.starting_price||0),current+increment);
+      const open=String(a.status)==="OPEN";
+      return '<div class="auction">'+
+        '<span class="tag">'+esc(a.status)+'</span>'+ 
+        '<h3>'+esc(a.title)+'</h3>'+ 
+        '<p>'+esc(a.product_name||"")+'</p>'+ 
+        '<div class="price">'+money(current)+' บาท</div>'+ 
+        '<div class="next">เสนอขั้นต่ำครั้งถัดไป: '+money(next)+' บาท</div>'+ 
+        '<p class="small muted">เริ่ม: '+esc(a.starts_at||"-")+'<br>ปิด: '+esc(a.ends_at||"-")+'</p>'+ 
+        (open?'<div class="bidbox"><label for="bid-'+esc(a.id)+'"><strong>จำนวนเงินที่ต้องการเสนอ</strong></label>'+ 
+          '<input id="bid-'+esc(a.id)+'" type="number" min="'+next+'" step="'+increment+'" placeholder="อย่างน้อย '+money(next)+' บาท">'+ 
+          '<button id="btn-'+esc(a.id)+'" onclick="submitBid(\\''+esc(a.id)+'\\')">เสนอราคา</button>'+ 
+          '<div class="msg" id="msg-'+esc(a.id)+'"></div></div>':'<p class="muted">รายการนี้ยังไม่เปิดให้เสนอราคา</p>')+
+        '<div class="history"><strong>ประวัติราคา</strong><div id="history-'+esc(a.id)+'" class="small muted">กำลังโหลด...</div></div>'+ 
+        '</div>';
+    }).join("");
+    for(const a of x.auctions)showHistory(String(a.id));
   }catch(e){
     document.querySelector("#status").textContent="มีปัญหา";
     list.textContent="ไม่สามารถโหลดรายการประมูลได้";
   }
 }
+
 loadAuctions();
+setInterval(loadAuctions,15000);
 </script>
 </body>
 </html>`;
