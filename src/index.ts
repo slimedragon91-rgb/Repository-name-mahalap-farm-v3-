@@ -259,7 +259,7 @@ async function loadAuctions(){
         '<p class="small muted">เริ่ม: '+esc(a.starts_at||"-")+'<br>ปิด: '+esc(a.ends_at||"-")+'</p>'+ 
         (open?'<div class="bidbox"><label for="bid-'+esc(a.id)+'"><strong>จำนวนเงินที่ต้องการเสนอ</strong></label>'+ 
           '<input id="bid-'+esc(a.id)+'" type="number" min="'+next+'" step="'+increment+'" placeholder="อย่างน้อย '+money(next)+' บาท">'+ 
-          '<button id="btn-'+esc(a.id)+'" onclick="submitBid(\\''+esc(a.id)+'\\')">เสนอราคา</button>'+ 
+          '<button id="btn-'+esc(a.id)+'" onclick="submitBid(\''+esc(a.id)+'\')">เสนอราคา</button>'+ 
           '<div class="msg" id="msg-'+esc(a.id)+'"></div></div>':'<p class="muted">รายการนี้ยังไม่เปิดให้เสนอราคา</p>')+
         '<div class="history"><strong>ประวัติราคา</strong><div id="history-'+esc(a.id)+'" class="small muted">กำลังโหลด...</div></div>'+ 
         '</div>';
